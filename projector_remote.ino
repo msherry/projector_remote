@@ -113,10 +113,10 @@ void loop() {
       handle_up_press();
       break;
     case CH_D:
-      /* TODO: reset DOWN position */
+      handle_chd_press();
       break;
     case CH_U:
-      /* TODO: reset UP position */
+      handle_chu_press();
       break;
     case EQ:
       stop();
@@ -154,6 +154,7 @@ void loop() {
   /* Serial.println(cur_pos); */
 }
 
+/* Attempt to lower the projector to the bottom */
 void handle_down_press() {
   switch (projector_state) {
   case DESCENDING:
@@ -180,6 +181,7 @@ void handle_down_press() {
   }
 }
 
+/* Attempt to raise the projector to the top */
 void handle_up_press() {
   switch (projector_state) {
   case ASCENDING:
@@ -204,6 +206,26 @@ void handle_up_press() {
     ascend(up_time);
     break;
   }
+}
+
+/* Reset the projector to the down position */
+void handle_chd_press() {
+  if (projector_state != STOPPED) {
+    Serial.println(F("Projector is not stopped, not resetting position"));
+    return;
+  }
+  Serial.println(F("Resetting projector to DOWN position"));
+  cur_pos = DOWN_MILLIS;
+}
+
+/* Reset the projector to the up position */
+void handle_chu_press() {
+  if (projector_state != STOPPED) {
+    Serial.println(F("Projector is not stopped, not resetting position"));
+    return;
+  }
+  Serial.println(F("Resetting projector to UP position"));
+  cur_pos = 0;
 }
 
 void find_current_position() {
