@@ -7,6 +7,14 @@ decode_results results;
 const int LED_BLUE = 13;
 const int LED_RED = 12;
 
+/* Time to fully descend */
+const int DOWN_MILLIS = 5000;
+/* Time to fully ascend */
+const int UP_MILLIS = 10000;
+
+unsigned long start_time;
+unsigned long end_time;
+
 /* Generic "Car MP3" remote */
 unsigned long car_mp3_codes[] = {
   0xFFA25D,
@@ -73,11 +81,10 @@ void setup() {
   irrecv.enableIRIn();
   /* irrecv.blink13(true); */
 
-  pinMode(8, OUTPUT);
+  pinMode(8, OUTPUT);           /* LED common ground */
   digitalWrite(8, LOW);
   pinMode(LED_BLUE, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-
 
   Serial.println("Done setting up");
 }
@@ -87,8 +94,6 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   if (irrecv.decode(&results)) {
-    /* Serial.print(results.decode_type); Serial.print("  "); */
-    /* Serial.println(results.value, HEX); */
 
     button_t button = decode_ir(results.value);
     if (button != -1) {
@@ -97,26 +102,133 @@ void loop() {
 
     switch (button) {
     case MINUS:
-      handle_down();
+      handle_down_press();
       break;
     case PLUS:
-      handle_up();
+      handle_up_press();
       break;
     }
-
     irrecv.resume();
    }
+
+  switch(projector_state) {
+  case UP:
+  case DOWN:
+    /* Nothing to do */
+    break;
+  case DESCENDING:
+    /* TODO: handle overflow */
+    if (millis() >= end_time) {
+      /* All done */
+      stop();
+      projector_state = DOWN;
+    }
+    break;
+  case ASCENDING:
+    /* TODO: handle overflow */
+    if (millis() >= end_time) {
+      /* All done */
+      stop();
+      projector_state = UP;
+    }
+    break;
+  }
 }
 
-void handle_down() {
+void handle_down_press() {
+  switch (projector_state) {
+  case DOWN:
+  case DESCENDING:
+    /* Already down/descending, do nothing */
+    Serial.println(F("Already down or descending, ignoring"));
+    break;
+  case UP:
+    /* Start descending for DOWN_MILLIS milliseconds */
+    Serial.println(F("Going down"));
+    descend(DOWN_MILLIS);
+    break;
+  case ASCENDING:
+    /* Our speed is linear, so map how far up we are based on UP_MILLIS to the
+     * amount of DOWN_MILLIS it will take to reverse it */
+    unsigned int up_time = millis() - start_time;
+    unsigned int down_time = map(up_time, 0, UP_MILLIS, 0, DOWN_MILLIS);
+    Serial.print(F("Already ascended for "));
+    Serial.print(up_time);
+    Serial.print(" millis, going down for only ");
+    Serial.print(down_time);
+    Serial.println(F(" millis"));
+    descend(down_time);
+    break;
+  }
+}
+
+void handle_up_press() {
+  switch (projector_state) {
+  case UP:
+  case ASCENDING:
+    /* Already up/ascending, do nothing */
+    Serial.println(F("Already up or ascending, ignoring"));
+    break;
+  case DOWN:
+    /* Start ascending for UP_MILLIS milliseconds */
+    Serial.println(F("Going up"));
+    ascend(UP_MILLIS);
+    break;
+  case DESCENDING:
+    /* Our speed is linear, so map how far down we are based on DOWN_MILLIS to the
+     * amount of UP_MILLIS it will take to reverse it */
+    unsigned int down_time = millis() - start_time;
+    unsigned int up_time = map(down_time, 0, DOWN_MILLIS, 0, UP_MILLIS);
+    Serial.print(F("Already descended for "));
+    Serial.print(down_time);
+    Serial.print(" millis, going up for only ");
+    Serial.print(up_time);
+    Serial.println(F(" millis"));
+    ascend(down_time);
+    break;
+  }
+}
+
+void stop() {
+  disable_down();
+  disable_up();
+}
+
+void descend(unsigned long ms) {
+  unsigned long now;
+
+  projector_state = DESCENDING;
+  disable_up();
+  enable_down();
+  now = millis();
+  end_time = now + ms;
+  start_time = now;
+}
+
+void ascend(unsigned long ms) {
+  unsigned long now;
+
+  projector_state = ASCENDING;
+  disable_down();
+  enable_up();
+  now = millis();
+  end_time = now + ms;
+  start_time = now;
+}
+
+void enable_down() {
   digitalWrite(LED_BLUE, HIGH);
-  delay(1000);
+}
+
+void disable_down() {
   digitalWrite(LED_BLUE, LOW);
 }
 
-void handle_up() {
+void enable_up() {
   digitalWrite(LED_RED, HIGH);
-  delay(1000);
+}
+
+void disable_up() {
   digitalWrite(LED_RED, LOW);
 }
 
