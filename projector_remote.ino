@@ -67,6 +67,7 @@ typedef enum  {
   DOWN,
   ASCENDING,
   DESCENDING,
+  STOPPED,
 } projector_state_t;
 
 projector_state_t projector_state = UP;
@@ -83,15 +84,19 @@ void setup() {
 
   pinMode(LED_BLUE, OUTPUT);
   pinMode(LED_RED, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT); /* Internal pull-up/op-amp turns LED on
+                                 * otherwise */
 
   stop();
 
   irrecv.enableIRIn();
+  irrecv.blink13(false);
 
   Serial.println(F("Done setting up"));
 }
 
 // https://www.circuitbasics.com/arduino-ir-remote-receiver-tutorial/
+// Driving relays via active high: https://forum.arduino.cc/index.php?topic=274215.15
 
 void loop() {
   // put your main code here, to run repeatedly:
@@ -166,15 +171,15 @@ void handle_down_press() {
     descend(DOWN_MILLIS);
     break;
   case ASCENDING:
+  case STOPPED:
     /* Scale how long we ascended into an equivalent amount of (negative) down
      * millis, use that to update our position, and use that to find how much
      * time remains to full descent. */
     find_current_position();
 
     unsigned int down_time = DOWN_MILLIS - cur_pos;
-    Serial.print(F("Current position "));
-    Serial.print(cur_pos);
-    Serial.print(" , going down for only ");
+    report_current_position();
+    Serial.print("Going down for only ");
     Serial.print(down_time);
     Serial.println(F(" millis"));
     descend(down_time);
@@ -197,14 +202,14 @@ void handle_up_press() {
     ascend(UP_MILLIS);
     break;
   case DESCENDING:
+  case STOPPED:
     /* Our speed is linear, so increase our current position based on how long
      * we descended, then scale that to UP_MILLIS to find how long to ascend */
     find_current_position();
 
     unsigned int up_time = map(cur_pos, 0, DOWN_MILLIS, 0, UP_MILLIS);
-    Serial.print(F("Current position "));
-    Serial.print(cur_pos);
-    Serial.print(F(", going up for only "));
+    report_current_position();
+    Serial.print(F("Going up for only "));
     Serial.print(up_time);
     Serial.println(F(" millis"));
     ascend(up_time);
@@ -232,12 +237,24 @@ void find_current_position() {
     cur_pos -= map(now - last_action_time, 0, UP_MILLIS, 0, DOWN_MILLIS);
     last_action_time = now;
     break;
+  case STOPPED:
+    /* Nothing we can do here, so hope our position was set correctly when we
+     * stopped. */
+    break;
   }
+}
+
+void report_current_position() {
+    Serial.print(F("Current position "));
+    Serial.println(cur_pos);
 }
 
 void stop() {
   disable_down();
   disable_up();
+  find_current_position();
+  projector_state = STOPPED;
+  report_current_position();
 }
 
 void descend(unsigned long ms) {
