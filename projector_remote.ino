@@ -102,6 +102,7 @@ void loop() {
   if (irrecv.decode(&results)) {
     button_t button = decode_ir(results.value);
     if (button != -1) {
+      Serial.print(F("BTN: "));
       Serial.println(button);
     }
 
@@ -148,10 +149,8 @@ void loop() {
     }
     break;
   }
-
   /* find_current_position(); */
-  /* Serial.print("Cur pos: "); */
-  /* Serial.println(cur_pos); */
+  /* report_current_position(); */
 }
 
 /* Attempt to lower the projector to the bottom */
@@ -216,6 +215,7 @@ void handle_chd_press() {
   }
   Serial.println(F("Resetting projector to DOWN position"));
   cur_pos = DOWN_MILLIS;
+  report_current_position();
 }
 
 /* Reset the projector to the up position */
@@ -226,32 +226,31 @@ void handle_chu_press() {
   }
   Serial.println(F("Resetting projector to UP position"));
   cur_pos = 0;
+  report_current_position();
 }
 
 void find_current_position() {
-  /* Update the cur_pos variable, as well as possibly last_action_time */
-  unsigned long now;
+  /* Update the current position, as well as last_action_time */
+  unsigned long now = millis();
+
   switch(projector_state) {
   case DESCENDING:
-    now = millis();
     cur_pos += now - last_action_time;
-    last_action_time = now;
     break;
   case ASCENDING:
-    now = millis();
     cur_pos -= map(now - last_action_time, 0, UP_MILLIS, 0, DOWN_MILLIS);
-    last_action_time = now;
     break;
   case STOPPED:
     /* Nothing we can do here, so hope our position was set correctly when we
      * stopped. */
     break;
   }
+  last_action_time = now;
 }
 
 void report_current_position() {
-    Serial.print(F("Current position "));
-    Serial.println(cur_pos);
+    Serial.print(F("Current position (0-100): "));
+    Serial.println(map(cur_pos, 0, DOWN_MILLIS, 0, 100));
 }
 
 void stop() {
