@@ -262,6 +262,7 @@ void descend(unsigned long ms) {
 
   projector_state = DESCENDING;
   disable_up();
+  delay(10);
   enable_down();
   now = millis();
   end_time = now + ms;
@@ -273,6 +274,7 @@ void ascend(unsigned long ms) {
 
   projector_state = ASCENDING;
   disable_down();
+  delay(10);
   enable_up();
   now = millis();
   end_time = now + ms;
