@@ -87,7 +87,8 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT); /* Internal pull-up/op-amp turns LED on
                                  * otherwise */
 
-  stop();
+  disable_down();
+  disable_up();
 
   irrecv.enableIRIn();
   irrecv.blink13(false);
@@ -129,6 +130,7 @@ void loop() {
   switch(projector_state) {
   case UP:
   case DOWN:
+  case STOPPED:
     /* Nothing to do */
     break;
   case DESCENDING:
