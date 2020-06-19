@@ -1,5 +1,8 @@
 #include <IRremote.h>
 
+#define DEBUG_ENABLE
+#include "DebugUtils.h"
+
 const int IR_RECV_PIN = 7;
 IRrecv irrecv(IR_RECV_PIN);
 decode_results results;
@@ -91,7 +94,7 @@ void setup() {
   irrecv.enableIRIn();
   irrecv.blink13(false);
 
-  Serial.println(F("Done setting up"));
+  DEBUGLN(F("Done setting up"));
 }
 
 // https://www.circuitbasics.com/arduino-ir-remote-receiver-tutorial/
@@ -102,8 +105,8 @@ void loop() {
   if (irrecv.decode(&results)) {
     button_t button = decode_ir(results.value);
     if (button != -1) {
-      Serial.print(F("BTN: "));
-      Serial.println(button);
+      DEBUG(F("BTN: "));
+      DEBUGLN(button);
     }
 
     switch (button) {
@@ -120,7 +123,7 @@ void loop() {
       handle_chu_press();
       break;
     case EQ:
-      stop();
+      handle_eq_press();
       break;
     }
     irrecv.resume();
@@ -136,7 +139,7 @@ void loop() {
       /* All done */
       stop();
       cur_pos = DOWN_MILLIS;
-      Serial.println(F("Done"));
+      DEBUGLN(F("Done"));
     }
     break;
   case ASCENDING:
@@ -145,7 +148,7 @@ void loop() {
       /* All done */
       stop();
       cur_pos = 0;
-      Serial.println(F("Done"));
+      DEBUGLN(F("Done"));
     }
     break;
   }
@@ -158,7 +161,7 @@ void handle_down_press() {
   switch (projector_state) {
   case DESCENDING:
     /* Already descending, do nothing */
-    Serial.println(F("Already descending, ignoring"));
+    DEBUGLN(F("Already descending, ignoring"));
     break;
   case ASCENDING:
   case STOPPED:
@@ -166,15 +169,15 @@ void handle_down_press() {
      * position */
     find_current_position();
     if (cur_pos == DOWN_MILLIS) {
-      Serial.println(F("Already down, ignoring"));
+      DEBUGLN(F("Already down, ignoring"));
       break;
     }
 
     unsigned int down_time = DOWN_MILLIS - cur_pos;
     report_current_position();
-    Serial.print("Going down for only ");
-    Serial.print(down_time);
-    Serial.println(F(" millis"));
+    DEBUG("Going down for only ");
+    DEBUG(down_time);
+    DEBUGLN(F(" millis"));
     descend(down_time);
     break;
   }
@@ -185,7 +188,7 @@ void handle_up_press() {
   switch (projector_state) {
   case ASCENDING:
     /* Already ascending, do nothing */
-    Serial.print(F("Already ascending, ignoring"));
+    DEBUGLN(F("Already ascending, ignoring"));
     break;
   case DESCENDING:
   case STOPPED:
@@ -193,15 +196,15 @@ void handle_up_press() {
      * position (and scaled to up time) */
     find_current_position();
     if (cur_pos == 0) {
-      Serial.println(F("Already up, ignoring"));
+      DEBUGLN(F("Already up, ignoring"));
       break;
     }
 
     unsigned int up_time = map(cur_pos, 0, DOWN_MILLIS, 0, UP_MILLIS);
     report_current_position();
-    Serial.print(F("Going up for only "));
-    Serial.print(up_time);
-    Serial.println(F(" millis"));
+    DEBUG(F("Going up for only "));
+    DEBUG(up_time);
+    DEBUGLN(F(" millis"));
     ascend(up_time);
     break;
   }
@@ -210,10 +213,10 @@ void handle_up_press() {
 /* Reset the projector to the down position */
 void handle_chd_press() {
   if (projector_state != STOPPED) {
-    Serial.println(F("Projector is not stopped, not resetting position"));
+    DEBUGLN(F("Projector is not stopped, not resetting position"));
     return;
   }
-  Serial.println(F("Resetting projector to DOWN position"));
+  DEBUGLN(F("Resetting projector to DOWN position"));
   cur_pos = DOWN_MILLIS;
   report_current_position();
 }
@@ -221,12 +224,17 @@ void handle_chd_press() {
 /* Reset the projector to the up position */
 void handle_chu_press() {
   if (projector_state != STOPPED) {
-    Serial.println(F("Projector is not stopped, not resetting position"));
+    DEBUGLN(F("Projector is not stopped, not resetting position"));
     return;
   }
-  Serial.println(F("Resetting projector to UP position"));
+  DEBUGLN(F("Resetting projector to UP position"));
   cur_pos = 0;
   report_current_position();
+}
+
+/* Stop the projector where it is */
+void handle_eq_press() {
+  stop();
 }
 
 void find_current_position() {
@@ -249,8 +257,8 @@ void find_current_position() {
 }
 
 void report_current_position() {
-    Serial.print(F("Current position (0-100): "));
-    Serial.println(map(cur_pos, 0, DOWN_MILLIS, 0, 100));
+    DEBUG(F("Current position (0-100): "));
+    DEBUGLN(map(cur_pos, 0, DOWN_MILLIS, 0, 100));
 }
 
 void stop() {
