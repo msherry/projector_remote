@@ -15,6 +15,9 @@ const int DOWN_MILLIS = 5000;
 /* Time to fully ascend */
 const int UP_MILLIS = 10000;
 
+/* Time between switching directions */
+const int RELAY_SWITCH_DELAY = 200;
+
 /* Generic "Car MP3" remote */
 unsigned long car_mp3_codes[] = {
   0xFFA25D,
@@ -78,18 +81,31 @@ int cur_pos = 0;
 unsigned long last_action_time;
 unsigned long end_time;
 
+/* Relays are active low without supporting circuitry */
+#define ACTIVE_LOW
+
+#ifdef ACTIVE_LOW
+#define ENABLED LOW
+#define DISABLED HIGH
+#else
+#define ENABLED HIGH
+#define DISABLED LOW
+#endif
+
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
+  // Disable before setting pins to output, per
+  // https://arduino-info.wikispaces.com/ArduinoPower
+  disable_down();
+  disable_up();
+
   pinMode(LED_BLUE, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT); /* Internal pull-up/op-amp turns LED on
                                  * otherwise */
-
-  disable_down();
-  disable_up();
 
   irrecv.enableIRIn();
   irrecv.blink13(false);
@@ -182,7 +198,7 @@ void handle_down_press() {
 
     unsigned int down_time = DOWN_MILLIS - cur_pos;
     report_current_position();
-    DEBUG("Going down for ");
+    DEBUG(F("Going down for "));
     if (down_time < DOWN_MILLIS) {
       DEBUG(F("only "));
     }
@@ -287,7 +303,7 @@ void descend(unsigned long ms) {
 
   projector_state = DESCENDING;
   disable_up();
-  delay(10);
+  delay(RELAY_SWITCH_DELAY);
   enable_down();
   now = millis();
   end_time = now + ms;
@@ -299,7 +315,7 @@ void ascend(unsigned long ms) {
 
   projector_state = ASCENDING;
   disable_down();
-  delay(10);
+  delay(RELAY_SWITCH_DELAY);
   enable_up();
   now = millis();
   end_time = now + ms;
@@ -307,19 +323,19 @@ void ascend(unsigned long ms) {
 }
 
 void enable_down() {
-  digitalWrite(LED_BLUE, HIGH);
+  digitalWrite(LED_BLUE, ENABLED);
 }
 
 void disable_down() {
-  digitalWrite(LED_BLUE, LOW);
+  digitalWrite(LED_BLUE, DISABLED);
 }
 
 void enable_up() {
-  digitalWrite(LED_RED, HIGH);
+  digitalWrite(LED_RED, ENABLED);
 }
 
 void disable_up() {
-  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_RED, DISABLED);
 }
 
 button_t decode_ir(unsigned long value) {
