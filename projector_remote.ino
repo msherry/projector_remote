@@ -4,8 +4,8 @@ const int IR_RECV_PIN = 7;
 IRrecv irrecv(IR_RECV_PIN);
 decode_results results;
 
-const int LED_BLUE = 13;
-const int LED_RED = 12;
+const int LED_BLUE = 12;
+const int LED_RED = 8;
 
 /* Time to fully descend */
 const int DOWN_MILLIS = 5000;
@@ -78,15 +78,14 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
-  irrecv.enableIRIn();
-  /* irrecv.blink13(true); */
-
-  pinMode(8, OUTPUT);           /* LED common ground */
-  digitalWrite(8, LOW);
   pinMode(LED_BLUE, OUTPUT);
   pinMode(LED_RED, OUTPUT);
 
-  Serial.println("Done setting up");
+  stop();
+
+  irrecv.enableIRIn();
+
+  Serial.println(F("Done setting up"));
 }
 
 // https://www.circuitbasics.com/arduino-ir-remote-receiver-tutorial/
@@ -106,6 +105,15 @@ void loop() {
       break;
     case PLUS:
       handle_up_press();
+      break;
+    case CH_D:
+      /* TODO: reset DOWN position */
+      break;
+    case CH_U:
+      /* TODO: reset UP position */
+      break;
+    case EQ:
+      /* TODO: stop */
       break;
     }
     irrecv.resume();
@@ -150,6 +158,10 @@ void handle_down_press() {
   case ASCENDING:
     /* Our speed is linear, so map how far up we are based on UP_MILLIS to the
      * amount of DOWN_MILLIS it will take to reverse it */
+
+    /* TODO: this only counts time since last transition, so rapid alternation
+     * between up/down will break it. We should instead store our progress
+     * up/down at each transition and base off of that */
     unsigned int up_time = millis() - start_time;
     unsigned int down_time = map(up_time, 0, UP_MILLIS, 0, DOWN_MILLIS);
     Serial.print(F("Already ascended for "));
