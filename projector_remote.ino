@@ -102,32 +102,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if (irrecv.decode(&results)) {
-    button_t button = decode_ir(results.value);
-    if (button != -1) {
-      DEBUG(F("BTN: "));
-      DEBUGLN(button);
-    }
-
-    switch (button) {
-    case MINUS:
-      handle_down_press();
-      break;
-    case PLUS:
-      handle_up_press();
-      break;
-    case CH_D:
-      handle_chd_press();
-      break;
-    case CH_U:
-      handle_chu_press();
-      break;
-    case EQ:
-      handle_eq_press();
-      break;
-    }
-    irrecv.resume();
-   }
+  handle_remote_input();
 
   switch(projector_state) {
   case STOPPED:
@@ -156,6 +131,38 @@ void loop() {
   /* report_current_position(); */
 }
 
+/* Check for and handle remote input */
+void handle_remote_input() {
+  if (irrecv.decode(&results)) {
+    button_t button = decode_ir(results.value);
+    if (button != -1) {
+      DEBUG(F("BTN: "));
+      DEBUGLN(button);
+    }
+
+    /* Serial.println(results.value, HEX); */
+
+    switch (button) {
+    case MINUS:
+      handle_down_press();
+      break;
+    case PLUS:
+      handle_up_press();
+      break;
+    case CH_D:
+      handle_chd_press();
+      break;
+    case CH_U:
+      handle_chu_press();
+      break;
+    case EQ:
+      handle_eq_press();
+      break;
+    }
+    irrecv.resume();
+   }
+}
+
 /* Attempt to lower the projector to the bottom */
 void handle_down_press() {
   switch (projector_state) {
@@ -175,7 +182,10 @@ void handle_down_press() {
 
     unsigned int down_time = DOWN_MILLIS - cur_pos;
     report_current_position();
-    DEBUG("Going down for only ");
+    DEBUG("Going down for ");
+    if (down_time < DOWN_MILLIS) {
+      DEBUG(F("only "));
+    }
     DEBUG(down_time);
     DEBUGLN(F(" millis"));
     descend(down_time);
@@ -202,7 +212,10 @@ void handle_up_press() {
 
     unsigned int up_time = map(cur_pos, 0, DOWN_MILLIS, 0, UP_MILLIS);
     report_current_position();
-    DEBUG(F("Going up for only "));
+    DEBUG(F("Going up for "));
+    if (up_time < UP_MILLIS) {
+      DEBUG(F("only "));
+    }
     DEBUG(up_time);
     DEBUGLN(F(" millis"));
     ascend(up_time);
