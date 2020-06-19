@@ -63,14 +63,12 @@ typedef enum button_t {
 
 
 typedef enum  {
-  UP = 0,
-  DOWN,
+  STOPPED = 0,
   ASCENDING,
   DESCENDING,
-  STOPPED,
 } projector_state_t;
 
-projector_state_t projector_state = UP;
+projector_state_t projector_state = STOPPED;
 /* Position (in millis down) */
 int cur_pos = 0;
 
@@ -128,8 +126,6 @@ void loop() {
    }
 
   switch(projector_state) {
-  case UP:
-  case DOWN:
   case STOPPED:
     /* Nothing to do */
     break;
@@ -138,7 +134,6 @@ void loop() {
     if (millis() >= end_time) {
       /* All done */
       stop();
-      projector_state = DOWN;
       cur_pos = DOWN_MILLIS;
       Serial.println(F("Done"));
     }
@@ -148,7 +143,6 @@ void loop() {
     if (millis() >= end_time) {
       /* All done */
       stop();
-      projector_state = UP;
       cur_pos = 0;
       Serial.println(F("Done"));
     }
@@ -162,22 +156,19 @@ void loop() {
 
 void handle_down_press() {
   switch (projector_state) {
-  case DOWN:
   case DESCENDING:
-    /* Already down/descending, do nothing */
-    Serial.println(F("Already down or descending, ignoring"));
-    break;
-  case UP:
-    /* Start descending for DOWN_MILLIS milliseconds */
-    Serial.println(F("Going down"));
-    descend(DOWN_MILLIS);
+    /* Already descending, do nothing */
+    Serial.println(F("Already descending, ignoring"));
     break;
   case ASCENDING:
   case STOPPED:
-    /* Scale how long we ascended into an equivalent amount of (negative) down
-     * millis, use that to update our position, and use that to find how much
-     * time remains to full descent. */
+    /* Find how much further we have to descend, based on our current
+     * position */
     find_current_position();
+    if (cur_pos == DOWN_MILLIS) {
+      Serial.println(F("Already down, ignoring"));
+      break;
+    }
 
     unsigned int down_time = DOWN_MILLIS - cur_pos;
     report_current_position();
@@ -191,23 +182,19 @@ void handle_down_press() {
 
 void handle_up_press() {
   switch (projector_state) {
-  case UP:
   case ASCENDING:
-    /* Already up/ascending, do nothing */
-    Serial.print(F("Already up or ascending (cur pos "));
-    Serial.print(cur_pos);      /* TODO: */
-    Serial.println(F("), ignoring"));
-    break;
-  case DOWN:
-    /* Start ascending for UP_MILLIS milliseconds */
-    Serial.println(F("Going up"));
-    ascend(UP_MILLIS);
+    /* Already ascending, do nothing */
+    Serial.print(F("Already ascending, ignoring"));
     break;
   case DESCENDING:
   case STOPPED:
-    /* Our speed is linear, so increase our current position based on how long
-     * we descended, then scale that to UP_MILLIS to find how long to ascend */
+    /* Find how much further we have to ascend, based on our current
+     * position (and scaled to up time) */
     find_current_position();
+    if (cur_pos == 0) {
+      Serial.println(F("Already up, ignoring"));
+      break;
+    }
 
     unsigned int up_time = map(cur_pos, 0, DOWN_MILLIS, 0, UP_MILLIS);
     report_current_position();
@@ -223,12 +210,6 @@ void find_current_position() {
   /* Update the cur_pos variable, as well as possibly last_action_time */
   unsigned long now;
   switch(projector_state) {
-  case UP:
-    cur_pos = 0;
-    break;
-  case DOWN:
-    cur_pos = DOWN_MILLIS;
-    break;
   case DESCENDING:
     now = millis();
     cur_pos += now - last_action_time;
