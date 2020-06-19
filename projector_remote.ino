@@ -12,9 +12,6 @@ const int DOWN_MILLIS = 5000;
 /* Time to fully ascend */
 const int UP_MILLIS = 10000;
 
-unsigned long start_time;
-unsigned long end_time;
-
 /* Generic "Car MP3" remote */
 unsigned long car_mp3_codes[] = {
   0xFFA25D,
@@ -73,6 +70,12 @@ typedef enum  {
 } projector_state_t;
 
 projector_state_t projector_state = UP;
+/* Position (in millis down) */
+int cur_pos = 0;
+
+unsigned long last_action_time;
+unsigned long end_time;
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -93,7 +96,6 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   if (irrecv.decode(&results)) {
-
     button_t button = decode_ir(results.value);
     if (button != -1) {
       Serial.println(button);
@@ -113,7 +115,7 @@ void loop() {
       /* TODO: reset UP position */
       break;
     case EQ:
-      /* TODO: stop */
+      stop();
       break;
     }
     irrecv.resume();
@@ -130,6 +132,8 @@ void loop() {
       /* All done */
       stop();
       projector_state = DOWN;
+      cur_pos = DOWN_MILLIS;
+      Serial.println(F("Done"));
     }
     break;
   case ASCENDING:
@@ -138,9 +142,15 @@ void loop() {
       /* All done */
       stop();
       projector_state = UP;
+      cur_pos = 0;
+      Serial.println(F("Done"));
     }
     break;
   }
+
+  /* find_current_position(); */
+  /* Serial.print("Cur pos: "); */
+  /* Serial.println(cur_pos); */
 }
 
 void handle_down_press() {
@@ -156,17 +166,15 @@ void handle_down_press() {
     descend(DOWN_MILLIS);
     break;
   case ASCENDING:
-    /* Our speed is linear, so map how far up we are based on UP_MILLIS to the
-     * amount of DOWN_MILLIS it will take to reverse it */
+    /* Scale how long we ascended into an equivalent amount of (negative) down
+     * millis, use that to update our position, and use that to find how much
+     * time remains to full descent. */
+    find_current_position();
 
-    /* TODO: this only counts time since last transition, so rapid alternation
-     * between up/down will break it. We should instead store our progress
-     * up/down at each transition and base off of that */
-    unsigned int up_time = millis() - start_time;
-    unsigned int down_time = map(up_time, 0, UP_MILLIS, 0, DOWN_MILLIS);
-    Serial.print(F("Already ascended for "));
-    Serial.print(up_time);
-    Serial.print(" millis, going down for only ");
+    unsigned int down_time = DOWN_MILLIS - cur_pos;
+    Serial.print(F("Current position "));
+    Serial.print(cur_pos);
+    Serial.print(" , going down for only ");
     Serial.print(down_time);
     Serial.println(F(" millis"));
     descend(down_time);
@@ -179,7 +187,9 @@ void handle_up_press() {
   case UP:
   case ASCENDING:
     /* Already up/ascending, do nothing */
-    Serial.println(F("Already up or ascending, ignoring"));
+    Serial.print(F("Already up or ascending (cur pos "));
+    Serial.print(cur_pos);      /* TODO: */
+    Serial.println(F("), ignoring"));
     break;
   case DOWN:
     /* Start ascending for UP_MILLIS milliseconds */
@@ -187,16 +197,40 @@ void handle_up_press() {
     ascend(UP_MILLIS);
     break;
   case DESCENDING:
-    /* Our speed is linear, so map how far down we are based on DOWN_MILLIS to the
-     * amount of UP_MILLIS it will take to reverse it */
-    unsigned int down_time = millis() - start_time;
-    unsigned int up_time = map(down_time, 0, DOWN_MILLIS, 0, UP_MILLIS);
-    Serial.print(F("Already descended for "));
-    Serial.print(down_time);
-    Serial.print(" millis, going up for only ");
+    /* Our speed is linear, so increase our current position based on how long
+     * we descended, then scale that to UP_MILLIS to find how long to ascend */
+    find_current_position();
+
+    unsigned int up_time = map(cur_pos, 0, DOWN_MILLIS, 0, UP_MILLIS);
+    Serial.print(F("Current position "));
+    Serial.print(cur_pos);
+    Serial.print(F(", going up for only "));
     Serial.print(up_time);
     Serial.println(F(" millis"));
-    ascend(down_time);
+    ascend(up_time);
+    break;
+  }
+}
+
+void find_current_position() {
+  /* Update the cur_pos variable, as well as possibly last_action_time */
+  unsigned long now;
+  switch(projector_state) {
+  case UP:
+    cur_pos = 0;
+    break;
+  case DOWN:
+    cur_pos = DOWN_MILLIS;
+    break;
+  case DESCENDING:
+    now = millis();
+    cur_pos += now - last_action_time;
+    last_action_time = now;
+    break;
+  case ASCENDING:
+    now = millis();
+    cur_pos -= map(now - last_action_time, 0, UP_MILLIS, 0, DOWN_MILLIS);
+    last_action_time = now;
     break;
   }
 }
@@ -214,7 +248,7 @@ void descend(unsigned long ms) {
   enable_down();
   now = millis();
   end_time = now + ms;
-  start_time = now;
+  last_action_time = now;
 }
 
 void ascend(unsigned long ms) {
@@ -225,7 +259,7 @@ void ascend(unsigned long ms) {
   enable_up();
   now = millis();
   end_time = now + ms;
-  start_time = now;
+  last_action_time = now;
 }
 
 void enable_down() {
