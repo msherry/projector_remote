@@ -7,8 +7,8 @@ const int IR_RECV_PIN = 7;
 IRrecv irrecv(IR_RECV_PIN);
 decode_results results;
 
-const int LED_BLUE = 12;
-const int LED_RED = 8;
+const int PIN_DOWN = 12;
+const int PIN_UP = 8;
 
 /* Time to fully descend */
 const int DOWN_MILLIS = 31070;
@@ -102,8 +102,8 @@ void setup() {
   disable_down();
   disable_up();
 
-  pinMode(LED_BLUE, OUTPUT);
-  pinMode(LED_RED, OUTPUT);
+  pinMode(PIN_DOWN, OUTPUT);
+  pinMode(PIN_UP, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT); /* Internal pull-up/op-amp turns LED on
                                  * otherwise */
 
@@ -323,19 +323,19 @@ void ascend(unsigned long ms) {
 }
 
 void enable_down() {
-  digitalWrite(LED_BLUE, ENABLED);
+  digitalWrite(PIN_DOWN, ENABLED);
 }
 
 void disable_down() {
-  digitalWrite(LED_BLUE, DISABLED);
+  digitalWrite(PIN_DOWN, DISABLED);
 }
 
 void enable_up() {
-  digitalWrite(LED_RED, ENABLED);
+  digitalWrite(PIN_UP, ENABLED);
 }
 
 void disable_up() {
-  digitalWrite(LED_RED, DISABLED);
+  digitalWrite(PIN_UP, DISABLED);
 }
 
 button_t decode_ir(unsigned long value) {
