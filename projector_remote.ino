@@ -11,9 +11,9 @@ const int LED_BLUE = 12;
 const int LED_RED = 8;
 
 /* Time to fully descend */
-const int DOWN_MILLIS = 5000;
+const int DOWN_MILLIS = 31070;
 /* Time to fully ascend */
-const int UP_MILLIS = 10000;
+const int UP_MILLIS = 31685;
 
 /* Time between switching directions */
 const int RELAY_SWITCH_DELAY = 200;
