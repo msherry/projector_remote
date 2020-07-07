@@ -72,9 +72,9 @@ typedef enum  {
   STOPPED = 0,
   ASCENDING,
   DESCENDING,
-} projector_state_t;
+} screen_state_t;
 
-projector_state_t projector_state = STOPPED;
+screen_state_t screen_state = STOPPED;
 /* Position (in millis down) */
 int cur_pos = 0;
 
@@ -120,25 +120,17 @@ void loop() {
   // put your main code here, to run repeatedly:
   handle_remote_input();
 
-  switch(projector_state) {
+  switch(screen_state) {
   case STOPPED:
     /* Nothing to do */
     break;
   case DESCENDING:
-    /* TODO: handle overflow */
-    if (millis() >= end_time) {
-      /* All done */
-      stop();
-      cur_pos = DOWN_MILLIS;
-      DEBUGLN(F("Done"));
-    }
-    break;
   case ASCENDING:
     /* TODO: handle overflow */
     if (millis() >= end_time) {
       /* All done */
       stop();
-      cur_pos = 0;
+      cur_pos = (screen_state == DESCENDING) ? DOWN_MILLIS : 0;
       DEBUGLN(F("Done"));
     }
     break;
@@ -179,9 +171,9 @@ void handle_remote_input() {
    }
 }
 
-/* Attempt to lower the projector to the bottom */
+/* Attempt to lower the screen to the bottom */
 void handle_down_press() {
-  switch (projector_state) {
+  switch (screen_state) {
   case DESCENDING:
     /* Already descending, do nothing */
     DEBUGLN(F("Already descending, ignoring"));
@@ -209,9 +201,9 @@ void handle_down_press() {
   }
 }
 
-/* Attempt to raise the projector to the top */
+/* Attempt to raise the screen to the top */
 void handle_up_press() {
-  switch (projector_state) {
+  switch (screen_state) {
   case ASCENDING:
     /* Already ascending, do nothing */
     DEBUGLN(F("Already ascending, ignoring"));
@@ -239,29 +231,29 @@ void handle_up_press() {
   }
 }
 
-/* Reset the projector to the down position */
+/* Reset the screen to the down position */
 void handle_chd_press() {
-  if (projector_state != STOPPED) {
-    DEBUGLN(F("Projector is not stopped, not resetting position"));
+  if (screen_state != STOPPED) {
+    DEBUGLN(F("Screen is not stopped, not resetting position"));
     return;
   }
-  DEBUGLN(F("Resetting projector to DOWN position"));
+  DEBUGLN(F("Resetting screen to DOWN position"));
   cur_pos = DOWN_MILLIS;
   report_current_position();
 }
 
-/* Reset the projector to the up position */
+/* Reset the screen to the up position */
 void handle_chu_press() {
-  if (projector_state != STOPPED) {
-    DEBUGLN(F("Projector is not stopped, not resetting position"));
+  if (screen_state != STOPPED) {
+    DEBUGLN(F("Screen is not stopped, not resetting position"));
     return;
   }
-  DEBUGLN(F("Resetting projector to UP position"));
+  DEBUGLN(F("Resetting screen to UP position"));
   cur_pos = 0;
   report_current_position();
 }
 
-/* Stop the projector where it is */
+/* Stop the screen where it is */
 void handle_eq_press() {
   stop();
 }
@@ -270,7 +262,7 @@ void find_current_position() {
   /* Update the current position, as well as last_action_time */
   unsigned long now = millis();
 
-  switch(projector_state) {
+  switch(screen_state) {
   case DESCENDING:
     cur_pos += now - last_action_time;
     break;
@@ -294,14 +286,14 @@ void stop() {
   disable_down();
   disable_up();
   find_current_position();
-  projector_state = STOPPED;
+  screen_state = STOPPED;
   report_current_position();
 }
 
 void descend(unsigned long ms) {
   unsigned long now;
 
-  projector_state = DESCENDING;
+  screen_state = DESCENDING;
   disable_up();
   delay(RELAY_SWITCH_DELAY);
   enable_down();
@@ -313,7 +305,7 @@ void descend(unsigned long ms) {
 void ascend(unsigned long ms) {
   unsigned long now;
 
-  projector_state = ASCENDING;
+  screen_state = ASCENDING;
   disable_down();
   delay(RELAY_SWITCH_DELAY);
   enable_up();
