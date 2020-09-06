@@ -11,7 +11,7 @@ const int PIN_DOWN = 12;
 const int PIN_UP = 8;
 
 /* Time to fully descend */
-const int DOWN_MILLIS = 31070;
+const int DOWN_MILLIS = 31000;
 /* Time to fully ascend */
 const int UP_MILLIS = 31685;
 
