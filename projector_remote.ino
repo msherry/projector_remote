@@ -129,8 +129,9 @@ void loop() {
     /* TODO: handle overflow */
     if (millis() >= end_time) {
       /* All done */
+      screen_state_t old_state = screen_state; /* stop() clobbers screen_state */
       stop();
-      cur_pos = (screen_state == DESCENDING) ? DOWN_MILLIS : 0;
+      cur_pos = (old_state == DESCENDING) ? DOWN_MILLIS : 0;
       DEBUGLN(F("Done"));
     }
     break;
