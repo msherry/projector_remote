@@ -7,7 +7,7 @@ const int IR_RECV_PIN = 7;
 IRrecv irrecv(IR_RECV_PIN);
 decode_results results;
 
-const int PIN_DOWN = 12;
+const int PIN_DOWN = 11;
 const int PIN_UP = 8;
 
 /* Time to fully descend */
