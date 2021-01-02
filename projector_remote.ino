@@ -7,11 +7,14 @@ const int IR_RECV_PIN = 7;
 IRrecv irrecv(IR_RECV_PIN);
 decode_results results;
 
-const int PIN_DOWN = 11;
-const int PIN_UP = 8;
+const int PIN_DOWN_OUTPUT = 11;
+const int PIN_UP_OUTPUT = 8;
+
+const int PIN_DOWN_BUTTON = 4;
+const int PIN_UP_BUTTON = 6;
 
 /* Time to fully descend */
-const int DOWN_MILLIS = 31035;
+const int DOWN_MILLIS = 31015;
 /* Time to fully ascend */
 const int UP_MILLIS = 31685;
 
@@ -102,8 +105,10 @@ void setup() {
   disable_down();
   disable_up();
 
-  pinMode(PIN_DOWN, OUTPUT);
-  pinMode(PIN_UP, OUTPUT);
+  pinMode(PIN_DOWN_OUTPUT, OUTPUT);
+  pinMode(PIN_UP_OUTPUT, OUTPUT);
+  pinMode(PIN_DOWN_BUTTON, INPUT_PULLUP); /* reads HIGH when switch is open */
+  pinMode(PIN_UP_BUTTON, INPUT_PULLUP); /* reads HIGH when switch is open */
   pinMode(LED_BUILTIN, OUTPUT); /* Internal pull-up/op-amp turns LED on
                                  * otherwise */
 
@@ -118,7 +123,12 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  handle_remote_input();
+  int did_get_input = 0;
+
+  did_get_input = handle_remote_input();
+  if (!did_get_input) {
+    handle_physical_input();
+  }
 
   switch(screen_state) {
   case STOPPED:
@@ -141,7 +151,9 @@ void loop() {
 }
 
 /* Check for and handle remote input */
-void handle_remote_input() {
+int handle_remote_input() {
+  int did_get_input = 0;
+
   if (irrecv.decode(&results)) {
     button_t button = decode_ir(results.value);
     if (button != -1) {
@@ -154,22 +166,47 @@ void handle_remote_input() {
     switch (button) {
     case MINUS:
       handle_down_press();
+      did_get_input = 1;
       break;
     case PLUS:
       handle_up_press();
+      did_get_input = 1;
       break;
     case CH_D:
       handle_chd_press();
+      did_get_input = 1;
       break;
     case CH_U:
       handle_chu_press();
+      did_get_input = 1;
       break;
     case EQ:
       handle_eq_press();
+      did_get_input = 1;
       break;
     }
     irrecv.resume();
    }
+  return did_get_input;
+}
+
+int handle_physical_input() {
+  int did_get_input = 0;
+
+  /* Pins are pulled up, so interpret LOW as button pressed */
+  int val = digitalRead(PIN_DOWN_BUTTON);
+  if (val == LOW) {
+    handle_down_press();
+    did_get_input = 1;
+  } else {
+    /* Only attempt to read the second button when the first has no input */
+    val = digitalRead(PIN_UP_BUTTON);
+    if (val == LOW) {
+      handle_up_press();
+      did_get_input = 1;
+    }
+  }
+  return did_get_input;
 }
 
 /* Attempt to lower the screen to the bottom */
@@ -316,19 +353,19 @@ void ascend(unsigned long ms) {
 }
 
 void enable_down() {
-  digitalWrite(PIN_DOWN, ENABLED);
+  digitalWrite(PIN_DOWN_OUTPUT, ENABLED);
 }
 
 void disable_down() {
-  digitalWrite(PIN_DOWN, DISABLED);
+  digitalWrite(PIN_DOWN_OUTPUT, DISABLED);
 }
 
 void enable_up() {
-  digitalWrite(PIN_UP, ENABLED);
+  digitalWrite(PIN_UP_OUTPUT, ENABLED);
 }
 
 void disable_up() {
-  digitalWrite(PIN_UP, DISABLED);
+  digitalWrite(PIN_UP_OUTPUT, DISABLED);
 }
 
 button_t decode_ir(unsigned long value) {
