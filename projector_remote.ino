@@ -125,9 +125,9 @@ void loop() {
   // put your main code here, to run repeatedly:
   int did_get_input = 0;
 
-  did_get_input = handle_remote_input();
+  did_get_input = handle_physical_input();
   if (!did_get_input) {
-    handle_physical_input();
+    handle_remote_input();
   }
 
   switch(screen_state) {
