@@ -18,8 +18,11 @@ const int DOWN_MILLIS = 31015;
 /* Time to fully ascend */
 const int UP_MILLIS = 31685;
 
-/* Time between switching directions */
+/* Time between switching directions, in ms */
 const int RELAY_SWITCH_DELAY = 200;
+
+/* Debounce time in ms */
+const int SWITCH_DEBOUNCE_DELAY = 500;
 
 /* Generic "Car MP3" remote */
 unsigned long car_mp3_codes[] = {
@@ -83,6 +86,11 @@ int cur_pos = 0;
 
 unsigned long last_action_time;
 unsigned long end_time;
+
+/* Last time a physical switch was pressed */
+unsigned long last_switch_time = 0;
+/* No physical switch was pressed before this time */
+int physical_input_clear = 1;
 
 /* Relays are active low without supporting circuitry */
 #define ACTIVE_LOW
@@ -191,21 +199,65 @@ int handle_remote_input() {
 }
 
 int handle_physical_input() {
+  /* If the screen is moving and the same-direction button is pressed, treat it
+   * as a STOP press. Otherwise, handle as for the remote. */
+
   int did_get_input = 0;
+  unsigned long now = millis();
+  int in_debounce = now - last_switch_time <= SWITCH_DEBOUNCE_DELAY;
+
+  /* DEBUG(F("physical_input_clear: ")); */
+  /* DEBUG(physical_input_clear); */
+  /* DEBUG(F("  ")); */
+  /* DEBUG(F("last_switch_time: ")); */
+  /* DEBUG(last_switch_time); */
+  /* DEBUG(F("  ")); */
+  /* DEBUG(F("now: ")); */
+  /* DEBUG(now); */
+  /* DEBUG(F("  ")); */
+  /* DEBUG(F("in debounce: ")); */
+  /* DEBUG(in_debounce); */
+  /* DEBUGLN(F("")); */
+
+  if (in_debounce) {
+    /* Still debouncing, take no action */
+    return did_get_input;
+  }
 
   /* Pins are pulled up, so interpret LOW as button pressed */
-  int val = digitalRead(PIN_DOWN_BUTTON);
-  if (val == LOW) {
-    handle_down_press();
-    did_get_input = 1;
-  } else {
-    /* Only attempt to read the second button when the first has no input */
-    val = digitalRead(PIN_UP_BUTTON);
-    if (val == LOW) {
-      handle_up_press();
-      did_get_input = 1;
+  int down_press = digitalRead(PIN_DOWN_BUTTON) == LOW;
+  int up_press = digitalRead(PIN_UP_BUTTON) == LOW;
+
+  /* Only handle fresh button presses (not long button holds) */
+  if (physical_input_clear && (down_press || up_press)) {
+    if (down_press) {
+      DEBUG(F("DOWN button press: "));
+      if (screen_state == DESCENDING) {
+        DEBUGLN("stopping");
+        stop();
+      } else {
+        DEBUGLN("descending");
+        handle_down_press();
+      }
+    } else if (up_press) {
+      /* Only check for UP presses if DOWN is not pressed */
+      DEBUG(F("UP button press: "));
+      if (screen_state == ASCENDING) {
+        DEBUGLN(F("stopping"));
+        stop();
+      } else {
+        DEBUGLN(F("ascending"));
+        handle_up_press();
+      }
     }
+    did_get_input = 1;
+    last_switch_time = now;
   }
+
+  /* Separately from handling input, record whether or not a button was pressed
+   * at all */
+  physical_input_clear = !(down_press || up_press);
+
   return did_get_input;
 }
 
