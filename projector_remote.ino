@@ -26,24 +26,31 @@ const int SWITCH_DEBOUNCE_DELAY = 500;
 
 /* Generic "Car MP3" remote */
 unsigned long car_mp3_codes[] = {
+  // Row 0
   0xFFA25D,
   0xFF629D,
   0xFFE21D,
+  // Row 1
   0xFF22DD,
   0xFF02FD,
   0xFFC23D,
+  // Row 2
   0xFFE01F,
   0xFFA857,
   0xFF906F,
+  // Row 3
   0xFF6897,
   0xFF9867,
   0xFFB04F,
+  // Row 4
   0xFF30CF,
   0xFF18E7,
   0xFF7A85,
+  // Row 5
   0xFF10EF,
   0xFF38C7,
   0xFF5AA5,
+  // Row 6
   0xFF42BD,
   0xFF4AB5,
   0xFF52AD,
